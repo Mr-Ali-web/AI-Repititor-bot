@@ -5,6 +5,8 @@ import logging
 import os
 import json
 import asyncio
+import threading  # MUHIM: threading import qilish kerak!
+from flask import Flask  # MUHIM: Flask import qilish kerak!
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, 
@@ -12,12 +14,15 @@ from telegram.ext import (
 )
 import google.generativeai as genai 
 
-# 1. LOGGING
+# 1. LOGGING - EN BOSHIDA BO'LISHI KERAK
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
+    level=logging.INFO,
+    handlers=[logging.StreamHandler()]  # MUHIM: Render'da ko'rinishi uchun
 )
 logger = logging.getLogger(__name__)
+
+print("🚀 Dastur ishga tushyapti...")  # Tekshirish uchun
 
 # --- TO'LIQ KONFIGURATSIYA (MUHIM: o'zgartiring!) ---
 TELEGRAM_TOKEN = "8665590507:AAEXHhP6_Blv8Ocikc9YCapV4w6nJk51Ni8"
@@ -25,6 +30,48 @@ GEMINI_API_KEY = "AIzaSyB4YDehOLYyJKl5A_VUAU54jAENBOYaHfM"
 
 # Gemini sozlamasi
 genai.configure(api_key=GEMINI_API_KEY)
+
+# MA'LUMOTLAR BAZASI
+USERS_FILE = 'users.json'
+
+def load_db():
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except: 
+            return {}
+    return {}
+
+def save_db(data):
+    with open(USERS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
+
+users_db = load_db()
+
+# CONVERSATION STATES
+NAME, CLASS, SUBJECTS, PHONE, PARENT_PHONE = range(5)
+SUBJECTS_LIST = {'1': '📐 Matematika', '2': '⚛️ Fizika', '3': '🧪 Kimyo', '4': '🧬 Biologiya', '5': '📜 Tarix', '6': '🇬🇧 Ingliz tili'}
+
+# FLASK APP - MUHIM: global darajada
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot ishlayapti! 🚀"
+
+@app.route('/health')
+def health():
+    return "OK", 200
+
+# UI TUGMALAR
+def get_main_menu():
+    keyboard = [
+        [KeyboardButton("🤖 AI Repetitor"), KeyboardButton("🎮 Bilim O'yini")],
+        [KeyboardButton("📊 Reyting"), KeyboardButton("👤 Profilim")],
+        [KeyboardButton("ℹ️ Yordam")]
+    ]
+    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 def get_gemini_response(prompt):
     """Gemini API dan javob olish - 2.5 modellari uchun"""
@@ -49,37 +96,6 @@ def get_gemini_response(prompt):
             except Exception as e:
                 logger.error(f"Barcha urinishlar muvaffaqiyatsiz: {e}")
                 return None
-
-# MA'LUMOTLAR BAZASI
-USERS_FILE = 'users.json'
-
-def load_db():
-    if os.path.exists(USERS_FILE):
-        try:
-            with open(USERS_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except: 
-            return {}
-    return {}
-
-def save_db(data):
-    with open(USERS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
-users_db = load_db()
-
-# CONVERSATION STATES
-NAME, CLASS, SUBJECTS, PHONE, PARENT_PHONE = range(5)
-SUBJECTS_LIST = {'1': '📐 Matematika', '2': '⚛️ Fizika', '3': '🧪 Kimyo', '4': '🧬 Biologiya', '5': '📜 Tarix', '6': '🇬🇧 Ingliz tili'}
-
-# UI TUGMALAR
-def get_main_menu():
-    keyboard = [
-        [KeyboardButton("🤖 AI Repetitor"), KeyboardButton("🎮 Bilim O'yini")],
-        [KeyboardButton("📊 Reyting"), KeyboardButton("👤 Profilim")],
-        [KeyboardButton("ℹ️ Yordam")]
-    ]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
 # START HANDLER
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -364,30 +380,48 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=get_main_menu()
             )
 
-# MAIN FUNKSIYA
-def main():
-    app = Application.builder().token(TELEGRAM_TOKEN).build()
-    
-    registration_conv = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
-            CLASS: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_class)],
-            SUBJECTS: [CallbackQueryHandler(select_subjects)],
-            PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
-            PARENT_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_parent_phone)],
-        },
-        fallbacks=[CommandHandler('start', start)]
-    )
-    
-    app.add_handler(registration_conv)
-    app.add_handler(CommandHandler('exit', ai_chat_handler))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    print("🚀 BOT MUVAFFAQIYATLI ISHGA TUSHDI!")
-    print("📝 Gemini 2.5 modeli sozlandi!")
-    
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+def run_bot():
+    """Telegram botni alohida threadda ishga tushirish"""
+    try:
+        print("🤖 Bot threadi ishga tushyapti...")
+        bot_app = Application.builder().token(TELEGRAM_TOKEN).build()
+        
+        registration_conv = ConversationHandler(
+            entry_points=[CommandHandler('start', start)],
+            states={
+                NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+                CLASS: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_class)],
+                SUBJECTS: [CallbackQueryHandler(select_subjects)],
+                PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_phone)],
+                PARENT_PHONE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_parent_phone)],
+            },
+            fallbacks=[CommandHandler('start', start)]
+        )
+        
+        bot_app.add_handler(registration_conv)
+        bot_app.add_handler(CommandHandler('exit', ai_chat_handler))
+        bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        
+        print("✅ Bot handlerlar qo'shildi, polling boshlanmoqda...")
+        bot_app.run_polling(allowed_updates=Update.ALL_TYPES)
+    except Exception as e:
+        logger.error(f"Bot threadida xatolik: {e}")
+        print(f"❌ Bot xatosi: {e}")
 
-if __name__ == '__main__':
-    main()
+# ASOSIY FUNKSIYA
+if __name__ == "__main__":
+    print("🚀 MAIN: Dastur ishga tushmoqda...")
+    
+    # Botni threadda ishga tushirish
+    print("🤖 Bot threadini yaratish...")
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    print("✅ Bot threadi boshlandi!")
+    
+    # Flask serverni ishga tushirish
+    print(f"📡 Flask server ishga tushyapti...")
+    port = int(os.environ.get("PORT", 10000))
+    print(f"🚀 Server http://0.0.0.0:{port} da ishga tushadi")
+    
+    # MUHIM: debug=False bo'lishi kerak!
+    app.run(host="0.0.0.0", port=port, debug=False)
