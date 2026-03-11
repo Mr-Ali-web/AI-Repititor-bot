@@ -1,0 +1,54 @@
+{
+    "7246172722": {
+        "name": "Alixon",
+        "class": "5",
+        "subjects": [
+            "🧪 Kimyo",
+            "📐 Matematika"
+        ],
+        "phone": "+998949267479",
+        "parent_phone": "+998993717140",
+        "points": 105,
+        "questions_total": 0,
+        "level": "Yangi boshlovchi",
+        "history": 21,
+        "ai_mode": true
+    },
+    "7143184589": {
+        "name": "Aziz",
+        "class": "20",
+        "subjects": [
+            "🇬🇧 Ingliz tili",
+            "📜 Tarix"
+        ],
+        "phone": "9999999999",
+        "parent_phone": "93883787373",
+        "points": 20,
+        "history": 4,
+        "ai_mode": true
+    },
+    "7230074640": {
+        "name": "Azizxon xalimjonov 10 v",
+        "class": "10-V",
+        "subjects": [
+            "🇬🇧 Ingliz tili"
+        ],
+        "phone": "876343454",
+        "parent_phone": "972576119",
+        "points": 5,
+        "history": 1,
+        "ai_mode": true
+    },
+    "1359189227": {
+        "name": "С",
+        "class": "11",
+        "subjects": [
+            "🇬🇧 Ingliz tili"
+        ],
+        "phone": "+998972576848",
+        "parent_phone": "+998972576848",
+        "points": 0,
+        "history": 0,
+        "ai_mode": false
+    }
+}
