@@ -1,7 +1,16 @@
+<<<<<<< HEAD
 services:
   - type: web
     name: telegram-ai-bot
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: python bot.py
+=======
+services:
+  - type: web
+    name: telegram-ai-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+>>>>>>> 42a4daa6fc83f00d65809fff733c7b63afd1e617
     plan: free
