@@ -25,15 +25,18 @@ if sys.platform == 'win32':
 nest_asyncio.apply()
 
 
-# LOGGING
 logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
-    handlers=[logging.StreamHandler()]
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    stream=sys.stdout,
+    force=True
 )
-logger = logging.getLogger(__name__)
 
-print("🚀 Dastur ishga tushyapti...")
+print("="*60)
+print("🚀 BOT ISHGA TUSHMOQDA")
+print("📋 Loglar sozlandi")
+print("="*60)
+
 
 # --- TO'G'RI TOKENLAR (RENDERDAGI BILAN BIR XIL) ---
 TELEGRAM_TOKEN = "8665590507:AAEXHhP6_Blv8Ocikc9YCapV4w6nJk51Ni8"  # TO'G'RI TOKEN
