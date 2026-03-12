@@ -16,6 +16,7 @@ import asyncio
 import sys
 import nest_asyncio
 
+    
 # Windows uchun maxsus sozlash
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -40,6 +41,11 @@ GEMINI_API_KEY = "AIzaSyBKtSKNCf3dB2FOj1MEIXRNNAF6hwV8PSQ"  # RENDERDAGI GEMINI_
 
 # Gemini sozlamasi
 genai.configure(api_key=GEMINI_API_KEY)
+
+if __name__ == "__main__":
+    port = int(os.environ.get('PORT', 10000))
+    print(f"📡 Server {port} portda ishga tushadi")
+    app.run(host='0.0.0.0', port=port, debug=False)
 
 # MA'LUMOTLAR BAZASI
 USERS_FILE = 'users.json'
