@@ -4,28 +4,26 @@ import logging
 import os
 import json
 import threading
-from flask import Flask, request
+import sys
+import asyncio
+import nest_asyncio
+from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, 
     ContextTypes, CallbackQueryHandler, ConversationHandler
 )
-import google.generativeai as genai 
-import asyncio
-import sys
-import nest_asyncio
+import google.generativeai as genai
 
 # Windows uchun maxsus sozlash
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-# Mavjud event loop ga patch qo'llash
 nest_asyncio.apply()
 
 # Loglarni sozlash
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     stream=sys.stdout,
     force=True
 )
@@ -33,10 +31,9 @@ logger = logging.getLogger(__name__)
 
 print("="*60)
 print("🚀 BOT ISHGA TUSHMOQDA")
-print("📋 Loglar sozlandi")
 print("="*60)
 
-# --- TO'G'RI TOKENLAR ---
+# --- TOKENLAR ---
 TELEGRAM_TOKEN = "8665590507:AAEXHhP6_Blv8Ocikc9YCapV4w6nJk51Ni8"
 GEMINI_API_KEY = "AIzaSyBKtSKNCf3dB2FOj1MEIXRNNAF6hwV8PSQ"
 
@@ -51,17 +48,13 @@ def load_db():
         try:
             with open(USERS_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except Exception as e:
-            logger.error(f"DB yuklash xatosi: {e}")
+        except: 
             return {}
     return {}
 
 def save_db(data):
-    try:
-        with open(USERS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
-    except Exception as e:
-        logger.error(f"DB saqlash xatosi: {e}")
+    with open(USERS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=4)
 
 users_db = load_db()
 
@@ -80,14 +73,8 @@ def home():
 def health():
     return "OK", 200
 
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    """Telegram webhook endpoint"""
-    return "OK", 200
-
 @app.route('/status')
 def status():
-    """Bot holatini tekshirish"""
     return "Bot ishlayapti", 200
 
 # UI TUGMALAR
@@ -102,8 +89,7 @@ def get_main_menu():
 def get_gemini_response(prompt):
     """Gemini API dan javob olish"""
     try:
-        # To'g'ri model nomi
-        model = genai.GenerativeModel('gemini-1.5-flash')  # yoki 'gemini-pro'
+        model = genai.GenerativeModel('gemini-1.5-flash')
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -396,7 +382,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def run_bot():
     """Botni threadda ishga tushirish"""
     try:
-        print("🤖 Bot threadi ishga tushyapti...")
+        print("🔥🔥🔥 BOT THREADI ISHGA TUSHDI! 🔥🔥🔥")
+        print(f"🤖 Token: {TELEGRAM_TOKEN[:10]}...")
+        
         bot_app = Application.builder().token(TELEGRAM_TOKEN).build()
         
         registration_conv = ConversationHandler(
@@ -418,22 +406,22 @@ def run_bot():
         print("✅ Bot handlerlar qo'shildi, polling boshlanmoqda...")
         bot_app.run_polling(allowed_updates=Update.ALL_TYPES)
     except Exception as e:
-        logging.error(f"Bot threadida xatolik: {e}")
+        logger.error(f"Bot threadida xatolik: {e}")
         print(f"❌ Bot xatosi: {e}")
 
-# ASOSIY QISM
+# ============ ASOSIY QISM ============
+print("🚀 MAIN: Bot va Server ishga tushmoqda...")
+
+# Botni threadda ishga tushirish
+print("🤖 Bot threadini yaratish...")
+bot_thread = threading.Thread(target=run_bot, daemon=True)
+bot_thread.start()
+print(f"✅ Bot threadi boshlandi! Thread: {bot_thread.name}")
+
+# Flask serverni ishga tushirish
+port = int(os.environ.get("PORT", 10000))
+print(f"📡 Flask server http://0.0.0.0:{port} da ishga tushadi")
+
 if __name__ == "__main__":
-    print("🚀 MAIN: Dastur ishga tushmoqda...")
-    
-    # Botni threadda ishga tushirish
-    print("🤖 Bot threadini yaratish...")
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-    print("✅ Bot threadi boshlandi!")
-    
-    # Flask serverni ishga tushirish
-    port = int(os.environ.get("PORT", 10000))
-    print(f"📡 Flask server http://0.0.0.0:{port} da ishga tushadi")
-    
     # MUHIM: host='0.0.0.0' va debug=False
     app.run(host="0.0.0.0", port=port, debug=False)
