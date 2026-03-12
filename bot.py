@@ -4,19 +4,17 @@ import logging
 import os
 import json
 import threading
-from flask import Flask
+from flask import Flask, request
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, filters, 
     ContextTypes, CallbackQueryHandler, ConversationHandler
 )
 import google.generativeai as genai 
-
 import asyncio
 import sys
 import nest_asyncio
 
-    
 # Windows uchun maxsus sozlash
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -24,31 +22,26 @@ if sys.platform == 'win32':
 # Mavjud event loop ga patch qo'llash
 nest_asyncio.apply()
 
-
+# Loglarni sozlash
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     stream=sys.stdout,
     force=True
 )
+logger = logging.getLogger(__name__)
 
 print("="*60)
 print("🚀 BOT ISHGA TUSHMOQDA")
 print("📋 Loglar sozlandi")
 print("="*60)
 
-
-# --- TO'G'RI TOKENLAR (RENDERDAGI BILAN BIR XIL) ---
-TELEGRAM_TOKEN = "8665590507:AAEXHhP6_Blv8Ocikc9YCapV4w6nJk51Ni8"  # TO'G'RI TOKEN
-GEMINI_API_KEY = "AIzaSyBKtSKNCf3dB2FOj1MEIXRNNAF6hwV8PSQ"  # RENDERDAGI GEMINI_API_KEY
+# --- TO'G'RI TOKENLAR ---
+TELEGRAM_TOKEN = "8665590507:AAEXHhP6_Blv8Ocikc9YCapV4w6nJk51Ni8"
+GEMINI_API_KEY = "AIzaSyBKtSKNCf3dB2FOj1MEIXRNNAF6hwV8PSQ"
 
 # Gemini sozlamasi
 genai.configure(api_key=GEMINI_API_KEY)
-
-if __name__ == "__main__":
-    port = int(os.environ.get('PORT', 10000))
-    print(f"📡 Server {port} portda ishga tushadi")
-    app.run(host='0.0.0.0', port=port, debug=False)
 
 # MA'LUMOTLAR BAZASI
 USERS_FILE = 'users.json'
@@ -58,13 +51,17 @@ def load_db():
         try:
             with open(USERS_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except: 
+        except Exception as e:
+            logger.error(f"DB yuklash xatosi: {e}")
             return {}
     return {}
 
 def save_db(data):
-    with open(USERS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
+    try:
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
+    except Exception as e:
+        logger.error(f"DB saqlash xatosi: {e}")
 
 users_db = load_db()
 
@@ -88,6 +85,11 @@ def webhook():
     """Telegram webhook endpoint"""
     return "OK", 200
 
+@app.route('/status')
+def status():
+    """Bot holatini tekshirish"""
+    return "Bot ishlayapti", 200
+
 # UI TUGMALAR
 def get_main_menu():
     keyboard = [
@@ -100,7 +102,8 @@ def get_main_menu():
 def get_gemini_response(prompt):
     """Gemini API dan javob olish"""
     try:
-        model = genai.GenerativeModel('models/gemini-2.5-flash')
+        # To'g'ri model nomi
+        model = genai.GenerativeModel('gemini-1.5-flash')  # yoki 'gemini-pro'
         response = model.generate_content(prompt)
         return response.text
     except Exception as e:
@@ -415,7 +418,7 @@ def run_bot():
         print("✅ Bot handlerlar qo'shildi, polling boshlanmoqda...")
         bot_app.run_polling(allowed_updates=Update.ALL_TYPES)
     except Exception as e:
-        logger.error(f"Bot threadida xatolik: {e}")
+        logging.error(f"Bot threadida xatolik: {e}")
         print(f"❌ Bot xatosi: {e}")
 
 # ASOSIY QISM
@@ -432,5 +435,5 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     print(f"📡 Flask server http://0.0.0.0:{port} da ishga tushadi")
     
-    # MUHIM: debug=False bo'lishi kerak!python bot.py
+    # MUHIM: host='0.0.0.0' va debug=False
     app.run(host="0.0.0.0", port=port, debug=False)
