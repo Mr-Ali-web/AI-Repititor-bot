@@ -12,6 +12,18 @@ from telegram.ext import (
 )
 import google.generativeai as genai 
 
+import asyncio
+import sys
+import nest_asyncio
+
+# Windows uchun maxsus sozlash
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+# Mavjud event loop ga patch qo'llash
+nest_asyncio.apply()
+
+
 # LOGGING
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -23,8 +35,8 @@ logger = logging.getLogger(__name__)
 print("🚀 Dastur ishga tushyapti...")
 
 # --- TO'G'RI TOKENLAR (RENDERDAGI BILAN BIR XIL) ---
-TELEGRAM_TOKEN = "8665590507:AAEXHhpP6_B1v80cikc9YCapV4w6nJk51Ni8"  # TO'G'RI TOKEN
-GEMINI_API_KEY = "AIzaSyB4YDehOLYyJK15A_VUAuS4jAENBOYaHfM"  # RENDERDAGI GEMINI_API_KEY
+TELEGRAM_TOKEN = "8665590507:AAEXHhP6_Blv8Ocikc9YCapV4w6nJk51Ni8"  # TO'G'RI TOKEN
+GEMINI_API_KEY = "AIzaSyBKtSKNCf3dB2FOj1MEIXRNNAF6hwV8PSQ"  # RENDERDAGI GEMINI_API_KEY
 
 # Gemini sozlamasi
 genai.configure(api_key=GEMINI_API_KEY)
@@ -411,5 +423,5 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     print(f"📡 Flask server http://0.0.0.0:{port} da ishga tushadi")
     
-    # MUHIM: debug=False bo'lishi kerak!
+    # MUHIM: debug=False bo'lishi kerak!python bot.py
     app.run(host="0.0.0.0", port=port, debug=False)
